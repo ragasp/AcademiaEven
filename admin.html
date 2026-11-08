@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>لوحة المشرفين ورادار التحضير | أكاديميا إيفنت</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- مكتبة مسح كود QR بكاميرا الموبايل -->
+  <script src="https://unpkg.com/html5-qrcode"></script>
+  <style>
+    :root {
+      --espresso-dark: #140D09;
+      --glass-border: rgba(255, 215, 150, 0.18);
+      --glass-top-highlight: rgba(255, 240, 210, 0.45);
+    }
+    body {
+      font-family: 'Cairo', sans-serif;
+      background-color: var(--espresso-dark);
+      background-image: 
+        radial-gradient(circle at 20% 10%, rgba(180, 100, 30, 0.22) 0%, transparent 45%),
+        radial-gradient(circle at 80% 85%, rgba(40, 160, 120, 0.15) 0%, transparent 50%),
+        radial-gradient(circle at 50% 50%, #140d09 0%, #080503 100%);
+      color: #ffffff;
+      min-height: 100vh;
+    }
+    .ios-3d-glass {
+      background: linear-gradient(145deg, rgba(46, 30, 20, 0.7) 0%, rgba(20, 12, 8, 0.85) 100%);
+      backdrop-filter: blur(30px) saturate(200%);
+      border-radius: 22px;
+      border: 1px solid var(--glass-border);
+      border-top: 1.5px solid var(--glass-top-highlight);
+      box-shadow: 0 20px 45px -10px rgba(0, 0, 0, 0.85), inset 0 1px 2px rgba(255, 255, 255, 0.35);
+    }
+    .glass-btn {
+      background: linear-gradient(180deg, #5eead4 0%, #0d9488 100%);
+      color: #042f2e;
+      border-top: 1.5px solid #ffffff;
+      box-shadow: 0 6px 20px rgba(13, 148, 136, 0.45);
+    }
+    #reader video {
+      border-radius: 16px;
+      width: 100% !important;
+    }
+  </style>
+</head>
+<body class="pb-16">
+
+  <!-- شريط التحكم العلوي -->
+  <header class="p-4 ios-3d-glass rounded-none border-x-0 border-t-0 flex items-center justify-between">
+    <div class="flex items-center gap-2">
+      <span class="text-xl">🔒</span>
+      <h1 class="font-black text-amber-400 text-base">بوابة المشرفين الأكاديمية</h1>
+    </div>
+    <a href="index.html" class="text-xs text-stone-300 hover:text-white">الرئيسية ←</a>
+  </header>
+
+  <main class="max-w-md mx-auto px-4 mt-5 space-y-4">
+
+    <!-- كارت ماسح الـ QR بالكاميرا -->
+    <section class="ios-3d-glass p-5 space-y-4 text-center">
+      <div class="flex items-center justify-between">
+        <span class="text-xs bg-emerald-500/20 text-emerald-300 px-3 py-1 rounded-full border border-emerald-400/30 font-bold">بوابة الدخول</span>
+        <h2 class="font-extrabold text-white text-base">رادار مسح تذاكر الحضور</h2>
+      </div>
+
+      <!-- نافذة الكاميرا -->
+      <div id="reader" class="overflow-hidden rounded-2xl border border-white/20 bg-black/40 min-h-[220px] flex items-center justify-center text-xs text-stone-400">
+        اضغط على الزر لتشغيل ماسح الكاميرا
+      </div>
+
+      <button id="startScanBtn" onclick="toggleScanner()" class="glass-btn w-full py-2.5 rounded-xl text-xs font-black transition active:scale-95">
+        تشغيل كاميرا مسح الـ QR
+      </button>
+
+      <div id="scanResult" class="hidden p-3 rounded-xl bg-white/5 border border-white/10 text-xs space-y-1 text-right">
+        <p id="attendeeName" class="font-black text-amber-300"></p>
+        <p id="ticketStatus" class="text-stone-300"></p>
+      </div>
+    </section>
+
+    <!-- إحصائيات المؤتمر اللحظية -->
+    <section class="ios-3d-glass p-4 space-y-3">
+      <h2 class="font-extrabold text-white text-sm">بيانات الحضور الفعلية</h2>
+      <div class="grid grid-cols-2 gap-3">
+        <div class="p-3 rounded-xl bg-white/5 border border-white/10 text-center">
+          <p class="text-[10px] text-stone-300">إجمالي الحضور المؤكد</p>
+          <p id="totalAttended" class="text-2xl font-black text-emerald-400 mt-1">0</p>
+        </div>
+        <div class="p-3 rounded-xl bg-white/5 border border-white/10 text-center">
+          <p class="text-[10px] text-stone-300">التذاكر المصدرة</p>
+          <p id="totalTickets" class="text-2xl font-black text-amber-400 mt-1">0</p>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <script src="app.js"></script>
+  <script>
+    let html5QrCode;
+    let scanning = false;
+
+    // فحص الصلاحيات أولاً
+    document.addEventListener('DOMContentLoaded', async () => {
+      await verifyRoleAndRedirect('admin');
+      loadStats();
+    });
+
+    async function loadStats() {
+      const { data: tickets } = await supabaseClient.from('tickets').select('*');
+      if (tickets) {
+        document.getElementById('totalTickets').textContent = tickets.length;
+        document.getElementById('totalAttended').textContent = tickets.filter(t => t.attended).length;
+      }
+    }
+
+    async function toggleScanner() {
+      const btn = document.getElementById('startScanBtn');
+      if (!scanning) {
+        html5QrCode = new Html5Qrcode("reader");
+        await html5QrCode.start(
+          { facingMode: "environment" },
+          { fps: 10, qrbox: { width: 220, height: 220 } },
+          onScanSuccess
+        );
+        btn.textContent = "إيقاف الكاميرا";
+        scanning = true;
+      } else {
+        await html5QrCode.stop();
+        btn.textContent = "تشغيل كاميرا مسح الـ QR";
+        scanning = false;
+      }
+    }
+
+    async function onScanSuccess(decodedText) {
+      // الكود المقروء يكون كود التذكرة
+      const resBox = document.getElementById('scanResult');
+      resBox.classList.remove('hidden');
+
+      const { data: ticket, error } = await supabaseClient
+        .from('tickets')
+        .select('*')
+        .eq('ticket_code', decodedText)
+        .single();
+
+      if (error || !ticket) {
+        document.getElementById('attendeeName').textContent = "❌ تذكرة غير صالحة!";
+        document.getElementById('ticketStatus').textContent = "لم يتم العثور على التذكرة في النظام.";
+        return;
+      }
+
+      if (ticket.attended) {
+        document.getElementById('attendeeName').textContent = `⚠️ تنبيه: ${ticket.attendee_name}`;
+        document.getElementById('ticketStatus').textContent = "تم تسجيل حضور هذه التذكرة مسبقاً!";
+        return;
+      }
+
+      // تحويل الحالة إلى حاضر وتفعيل الشهادة
+      await supabaseClient
+        .from('tickets')
+        .update({ attended: true, attended_at: new Date() })
+        .eq('id', ticket.id);
+
+      document.getElementById('attendeeName').textContent = `✅ مرحباً: ${ticket.attendee_name}`;
+      document.getElementById('ticketStatus').textContent = "تم إثبات الحضور وتفعيل إصدار الشهادة بنجاح!";
+      loadStats();
+    }
+  </script>
+</body>
+</html>
