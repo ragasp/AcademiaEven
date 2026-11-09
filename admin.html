@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>لوحة الإدارة والتحكيم | أكاديميا إيفنت</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://unpkg.com/html5-qrcode"></script>
+  <style>
+    body {
+      font-family: 'Cairo', sans-serif;
+      background-color: #140D09;
+      background-image: 
+        radial-gradient(circle at 20% 10%, rgba(180, 100, 30, 0.22) 0%, transparent 45%),
+        radial-gradient(circle at 80% 85%, rgba(40, 160, 120, 0.15) 0%, transparent 50%),
+        radial-gradient(circle at 50% 50%, #140d09 0%, #080503 100%);
+      color: #ffffff;
+      min-height: 100vh;
+    }
+    .ios-3d-glass {
+      background: linear-gradient(145deg, rgba(46, 30, 20, 0.72) 0%, rgba(20, 12, 8, 0.88) 100%);
+      backdrop-filter: blur(30px) saturate(200%);
+      border-radius: 22px;
+      border: 1px solid rgba(255, 215, 150, 0.18);
+      border-top: 1.5px solid rgba(255, 240, 210, 0.45);
+      box-shadow: 0 20px 45px -10px rgba(0, 0, 0, 0.85);
+    }
+    .glass-input {
+      background: rgba(10, 6, 4, 0.65);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+    }
+    .glass-btn {
+      background: linear-gradient(180deg, #5eead4 0%, #0d9488 100%);
+      color: #042f2e;
+      border-top: 1.5px solid #ffffff;
+    }
+  </style>
+</head>
+<body class="pb-20">
+
+  <header class="p-4 ios-3d-glass rounded-none border-x-0 border-t-0 flex items-center justify-between">
+    <div class="flex items-center gap-2">
+      <span class="text-xl">🔒</span>
+      <div>
+        <h1 class="font-black text-amber-400 text-sm">لوحة التحكم الأكاديمية الشاملة</h1>
+        <p id="adminRoleBadge" class="text-[10px] text-stone-300">جاري فحص الصلاحية...</p>
+      </div>
+    </div>
+    <a href="index.html" class="text-xs bg-white/10 px-3 py-1.5 rounded-xl text-white font-bold">الرئيسية ←</a>
+  </header>
+
+  <main class="max-w-md mx-auto px-4 mt-4 space-y-5">
+
+    <!-- 1. إحصائيات سريعة -->
+    <div class="grid grid-cols-3 gap-2.5 text-center">
+      <div class="ios-3d-glass p-3">
+        <p class="text-[10px] text-stone-300">إجمالي التذاكر</p>
+        <p id="statTotalTickets" class="text-xl font-black text-amber-400 mt-1">0</p>
+      </div>
+      <div class="ios-3d-glass p-3">
+        <p class="text-[10px] text-stone-300">الحضور الفعلي</p>
+        <p id="statAttended" class="text-xl font-black text-emerald-400 mt-1">0</p>
+      </div>
+      <div class="ios-3d-glass p-3">
+        <p class="text-[10px] text-stone-300">الأبحاث المقدمة</p>
+        <p id="statPapers" class="text-xl font-black text-teal-300 mt-1">0</p>
+      </div>
+    </div>
+
+    <!-- 2. رادار مسح التذاكر بالكاميرا أو بالكود اليدوي -->
+    <section class="ios-3d-glass p-4 space-y-3">
+      <h2 class="font-black text-sm text-amber-400">📷 رادار إثبات الحضور وتفعيل الشهادات</h2>
+      <div id="reader" class="overflow-hidden rounded-2xl border border-white/15 bg-black/50 min-h-[180px] flex items-center justify-center text-xs text-stone-400">
+        اضغط لتشغيل الكاميرا أو أدخل كود التذكرة يدوياً بالأسفل
+      </div>
+      <button id="startScanBtn" onclick="toggleScanner()" class="glass-btn w-full py-2.5 rounded-xl text-xs font-black">
+        تشغيل كاميرا مسح الـ QR
+      </button>
+
+      <!-- تفعيل يدوي سريع بالكود -->
+      <div class="flex gap-2 pt-1">
+        <input type="text" id="manualTicketCode" placeholder="أدخل كود التذكرة يدوياً (ACAD-VIP-...)" class="glass-input rounded-xl px-3 py-2 text-xs text-white w-full" dir="ltr">
+        <button onclick="markAttendanceByCode(document.getElementById('manualTicketCode').value)" class="bg-amber-500 text-stone-950 px-3 py-2 rounded-xl text-xs font-black shrink-0">
+          إثبات حضور
+        </button>
+      </div>
+      <div id="scanResult" class="hidden p-3 rounded-xl bg-white/5 border border-white/15 text-xs"></div>
+    </section>
+
+    <!-- 3. إضافة أو تعديل مؤتمر علمي -->
+    <section class="ios-3d-glass p-4 space-y-3">
+      <h2 id="formSectionTitle" class="font-black text-sm text-amber-400">➕ إضافة مؤتمر أو فعالية جديدة</h2>
+      <form onsubmit="saveEvent(event)" class="space-y-2.5 text-xs">
+        <input type="hidden" id="editEventId">
+        <input type="text" id="evTitle" required placeholder="اسم المؤتمر (مثال: ملتقى الأمن السيبراني 2026)" class="glass-input w-full rounded-xl px-3 py-2.5 text-white">
+        <div class="grid grid-cols-2 gap-2">
+          <input type="text" id="evCategory" placeholder="التصنيف (ذكاء اصطناعي)" class="glass-input w-full rounded-xl px-3 py-2 text-white">
+          <input type="number" id="evSeats" required placeholder="عدد المقاعد (200)" class="glass-input w-full rounded-xl px-3 py-2 text-white">
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <input type="date" id="evDate" required class="glass-input w-full rounded-xl px-3 py-2 text-white">
+          <input type="text" id="evLocation" required placeholder="القاعة / المكان" class="glass-input w-full rounded-xl px-3 py-2 text-white">
+        </div>
+        <input type="text" id="evSpeakers" placeholder="المتحدثون (أ.د. أحمد طارق...)" class="glass-input w-full rounded-xl px-3 py-2 text-white">
+        <textarea id="evDesc" rows="2" placeholder="وصف المؤتمر..." class="glass-input w-full rounded-xl px-3 py-2 text-white"></textarea>
+        <div class="flex gap-2">
+          <button type="submit" class="glass-btn flex-1 py-2.5 rounded-xl font-black">حفظ ونشر المؤتمر</button>
+          <button type="button" id="cancelEditBtn" onclick="resetEventForm()" class="hidden bg-white/10 px-4 py-2.5 rounded-xl font-bold">إلغاء</button>
+        </div>
+      </form>
+
+      <!-- قائمة المؤتمرات الحالية للتعديل أو الحذف -->
+      <div id="adminEventsList" class="space-y-2 pt-2 border-t border-white/10"></div>
+    </section>
+
+    <!-- 4. تحكيم الأبحاث العلمية (خاص بالدكاترة والأدمن) -->
+    <section class="ios-3d-glass p-4 space-y-3">
+      <h2 class="font-black text-sm text-teal-300">👨‍🏫 تحكيم ومراجعة الأبحاث العلمية المقدمة</h2>
+      <div id="papersReviewList" class="space-y-2.5 text-xs">
+        <p class="text-stone-400">جاري تحميل الأبحاث...</p>
+      </div>
+    </section>
+
+  </main>
+
+  <script src="app.js"></script>
+  <script>
+    let html5QrCode;
+    let scanning = false;
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      const { data: { user } } = await supabaseClient.auth.getUser();
+      if (!user) {
+        window.location.href = "auth.html";
+        return;
+      }
+      const { data: profile } = await supabaseClient.from('profiles').select('*').eq('id', user.id).single();
+      document.getElementById('adminRoleBadge').textContent = `مرحباً ${profile?.full_name || ''} (${profile?.role || 'مشرف'})`;
+
+      loadDashboardData();
+    });
+
+    async function loadDashboardData() {
+      // 1. التذاكر
+      const { data: tickets } = await supabaseClient.from('tickets').select('*');
+      if (tickets) {
+        document.getElementById('statTotalTickets').textContent = tickets.length;
+        document.getElementById('statAttended').textContent = tickets.filter(t => t.attended).length;
+      }
+
+      // 2. المؤتمرات
+      const { data: events } = await supabaseClient.from('events').select('*').order('created_at', { ascending: false });
+      const evContainer = document.getElementById('adminEventsList');
+      if (events && events.length > 0) {
+        evContainer.innerHTML = events.map(ev => `
+          <div class="p-2.5 rounded-xl bg-black/40 border border-white/10 flex items-center justify-between text-xs">
+            <div class="truncate ml-2">
+              <p class="font-bold text-white truncate">${ev.title}</p>
+              <p class="text-[10px] text-amber-300">المقاعد المتبقية: ${ev.available_seats} | ${ev.location}</p>
+            </div>
+            <div class="flex gap-1.5 shrink-0">
+              <button onclick='fillEditEvent(${JSON.stringify(ev)})' class="bg-amber-500/20 text-amber-300 px-2.5 py-1 rounded-lg text-[10px] font-bold">تعديل</button>
+              <button onclick="deleteEvent('${ev.id}')" class="bg-red-500/20 text-red-300 px-2.5 py-1 rounded-lg text-[10px] font-bold">حذف</button>
+            </div>
+          </div>
+        `).join('');
+      }
+
+      // 3. الأبحاث العلمية
+      const { data: papers } = await supabaseClient.from('research_papers').select('*, events(title)').order('submitted_at', { ascending: false });
+      const papersBox = document.getElementById('papersReviewList');
+      if (papers) {
+        document.getElementById('statPapers').textContent = papers.length;
+        if (papers.length === 0) {
+          papersBox.innerHTML = `<p class="text-stone-400">لا توجد أوراق بحثية مرفوعة حتى الآن.</p>`;
+        } else {
+          papersBox.innerHTML = papers.map(p => `
+            <div class="p-3 rounded-xl bg-black/40 border border-white/10 space-y-2">
+              <div class="flex justify-between items-start">
+                <h4 class="font-black text-amber-300">${p.paper_title}</h4>
+                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${p.status === 'approved' ? 'bg-emerald-500/20 text-emerald-300' : (p.status === 'rejected' ? 'bg-red-500/20 text-red-300' : 'bg-amber-500/20 text-amber-200')}">
+                  ${p.status === 'approved' ? 'مقبول ✅' : (p.status === 'rejected' ? 'مرفوض ❌' : 'قيد المراجعة ⏳')}
+                </span>
+              </div>
+              <p class="text-[11px] text-stone-300">${p.abstract_text}</p>
+              ${p.pdf_url ? `<a href="${p.pdf_url}" target="_blank" class="text-[10px] text-teal-300 underline block">🔗 فتح ملف البحث PDF</a>` : ''}
+              <div class="flex gap-2 pt-1">
+                <button onclick="reviewPaper('${p.id}', 'approved')" class="bg-emerald-600 text-white px-3 py-1 rounded-lg text-[10px] font-bold">قبول البحث</button>
+                <button onclick="reviewPaper('${p.id}', 'rejected')" class="bg-red-600 text-white px-3 py-1 rounded-lg text-[10px] font-bold">رفض</button>
+              </div>
+            </div>
+          `).join('');
+        }
+      }
+    }
+
+    // حفظ أو تعديل مؤتمر
+    async function saveEvent(e) {
+      e.preventDefault();
+      const id = document.getElementById('editEventId').value;
+      const seats = parseInt(document.getElementById('evSeats').value);
+      const payload = {
+        title: document.getElementById('evTitle').value,
+        category: document.getElementById('evCategory').value || 'مؤتمر علمي',
+        total_seats: seats,
+        available_seats: seats,
+        event_date: document.getElementById('evDate').value,
+        location: document.getElementById('evLocation').value,
+        speakers: document.getElementById('evSpeakers').value,
+        description: document.getElementById('evDesc').value
+      };
+
+      let error;
+      if (id) {
+        ({ error } = await supabaseClient.from('events').update(payload).eq('id', id));
+      } else {
+        ({ error } = await supabaseClient.from('events').insert(payload));
+      }
+
+      if (error) {
+        alert("خطأ في الحفظ (تأكد أن حسابك له صلاحية admin في جدول profiles): " + error.message);
+        return;
+      }
+
+      alert(id ? "✅ تم تحديث بيانات المؤتمر!" : "✅ تمت إضافة المؤتمر بنجاح!");
+      resetEventForm();
+      loadDashboardData();
+    }
+
+    function fillEditEvent(ev) {
+      document.getElementById('formSectionTitle').textContent = "✏️ تعديل بيانات المؤتمر";
+      document.getElementById('editEventId').value = ev.id;
+      document.getElementById('evTitle').value = ev.title;
+      document.getElementById('evCategory').value = ev.category || '';
+      document.getElementById('evSeats').value = ev.available_seats;
+      document.getElementById('evDate').value = ev.event_date ? ev.event_date.split('T')[0] : '';
+      document.getElementById('evLocation').value = ev.location;
+      document.getElementById('evSpeakers').value = ev.speakers || '';
+      document.getElementById('evDesc').value = ev.description || '';
+      document.getElementById('cancelEditBtn').classList.remove('hidden');
+    }
+
+    function resetEventForm() {
+      document.getElementById('formSectionTitle').textContent = "➕ إضافة مؤتمر أو فعالية جديدة";
+      document.getElementById('editEventId').value = '';
+      document.querySelector('form').reset();
+      document.getElementById('cancelEditBtn').classList.add('hidden');
+    }
+
+    async function deleteEvent(id) {
+      if (!confirm("هل أنت متأكد من حذف هذا المؤتمر؟")) return;
+      await supabaseClient.from('events').delete().eq('id', id);
+      loadDashboardData();
+    }
+
+    async function reviewPaper(paperId, status) {
+      await supabaseClient.from('research_papers').update({ status }).eq('id', paperId);
+      loadDashboardData();
+    }
+
+    // الكاميرا وإثبات الحضور
+    async function toggleScanner() {
+      const btn = document.getElementById('startScanBtn');
+      if (!scanning) {
+        html5QrCode = new Html5Qrcode("reader");
+        await html5QrCode.start(
+          { facingMode: "environment" },
+          { fps: 10, qrbox: { width: 220, height: 220 } },
+          (decodedText) => markAttendanceByCode(decodedText)
+        );
+        btn.textContent = "إيقاف الكاميرا";
+        scanning = true;
+      } else {
+        await html5QrCode.stop();
+        btn.textContent = "تشغيل كاميرا مسح الـ QR";
+        scanning = false;
+      }
+    }
+
+    async function markAttendanceByCode(code) {
+      if (!code) return;
+      const resBox = document.getElementById('scanResult');
+      resBox.classList.remove('hidden');
+
+      const { data: ticket, error } = await supabaseClient
+        .from('tickets')
+        .select('*')
+        .eq('ticket_code', code.trim())
+        .single();
+
+      if (error || !ticket) {
+        resBox.innerHTML = `<p class="text-red-400 font-bold">❌ التذكرة (${code}) غير مسجلة في النظام!</p>`;
+        return;
+      }
+
+      await supabaseClient.from('tickets').update({ attended: true, attended_at: new Date() }).eq('id', ticket.id);
+      resBox.innerHTML = `<p class="text-emerald-400 font-black">✅ تم إثبات حضور: ${ticket.attendee_name}</p><p class="text-stone-300 mt-0.5">تم تفعيل الشهادة الموثقة للطالب بنجاح.</p>`;
+      loadDashboardData();
+    }
+  </script>
+</body>
+</html>
