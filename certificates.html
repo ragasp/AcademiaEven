@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>الشهادات المعتمدة | أكاديميا إيفنت</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@500;600;700;800;900&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <style>
+    body {
+      font-family: 'Cairo', sans-serif;
+      background-color: #120B07;
+      background-image: 
+        radial-gradient(circle at 20% 10%, rgba(180, 95, 25, 0.22) 0%, transparent 45%),
+        radial-gradient(circle at 80% 85%, rgba(20, 140, 110, 0.15) 0%, transparent 50%);
+      color: #ffffff;
+      min-height: 100vh;
+    }
+    .glass-card {
+      background: linear-gradient(145deg, rgba(44, 28, 18, 0.75) 0%, rgba(18, 11, 7, 0.9) 100%);
+      backdrop-filter: blur(28px);
+      border-radius: 22px;
+      border: 1px solid rgba(255, 215, 150, 0.16);
+      border-top: 1.5px solid rgba(255, 240, 210, 0.4);
+      box-shadow: 0 18px 40px -10px rgba(0, 0, 0, 0.85);
+    }
+    .icon-box {
+      background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.14) 0%, rgba(28, 16, 10, 0.88) 100%);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+    .input-well {
+      background: rgba(8, 5, 3, 0.75);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+    }
+    .btn-primary {
+      background: linear-gradient(180deg, #5eead4 0%, #0d9488 100%);
+      color: #042f2e;
+      border-top: 1.5px solid #ffffff;
+    }
+    .cert-paper {
+      background: #ffffff;
+      color: #1c1917;
+      border: 10px double #92400e;
+    }
+  </style>
+</head>
+<body class="pb-16">
+
+  <!-- الهيدر مع زر الثلاث شرط أعلى اليمين -->
+  <header class="sticky top-0 z-40 px-4 py-3 glass-card rounded-none border-x-0 border-t-0 flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <button onclick="toggleSidebar()" aria-label="القائمة" class="w-10 h-10 rounded-xl icon-box flex flex-col items-center justify-center gap-1.5">
+        <span class="w-5 h-0.5 bg-amber-300 rounded-full"></span>
+        <span class="w-5 h-0.5 bg-amber-300 rounded-full"></span>
+        <span class="w-5 h-0.5 bg-amber-300 rounded-full"></span>
+      </button>
+      <span class="font-black text-amber-400 text-sm">الشهادات المعتمدة</span>
+    </div>
+    <a href="index.html" class="text-xs bg-white/10 px-3 py-1.5 rounded-xl font-bold">الرئيسية</a>
+  </header>
+
+  <!-- القائمة الجانبية -->
+  <div id="mainDrawer" class="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm hidden flex justify-start">
+    <aside class="w-72 glass-card rounded-none h-full p-5 flex flex-col justify-between">
+      <div class="space-y-5">
+        <div class="flex items-center justify-between border-b border-white/10 pb-3">
+          <span class="font-black text-sm text-amber-400">أقسام المنصة</span>
+          <button onclick="toggleSidebar()" class="w-8 h-8 rounded-lg bg-white/5 text-stone-300 text-sm font-bold">✕</button>
+        </div>
+        <div id="drawerUserBox"></div>
+        <nav class="space-y-2 text-xs font-extrabold">
+          <a href="index.html" class="block p-3 rounded-xl bg-white/5 border border-white/10">الرئيسية والمؤتمرات</a>
+          <a href="auth.html" class="block p-3 rounded-xl bg-white/5 border border-white/10">تسجيل الدخول والحسابات</a>
+          <a href="certificates.html" class="block p-3 rounded-xl bg-amber-500/20 border border-amber-400/40 text-amber-200">إصدار وتوثيق الشهادات</a>
+          <a href="admin.html" class="block p-3 rounded-xl bg-emerald-500/15 border border-emerald-400/30 text-emerald-300">بوابة الإدارة والتحكيم</a>
+        </nav>
+      </div>
+    </aside>
+  </div>
+
+  <main class="max-w-md mx-auto px-4 mt-5 space-y-5">
+
+    <section class="glass-card p-5 space-y-3">
+      <h2 class="font-black text-sm text-white">استخراج الشهادة الرقمية</h2>
+      <div class="flex gap-2">
+        <input type="text" id="certTicketCode" placeholder="ACAD-VIP-2026-..." class="input-well w-full rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none font-mono" dir="ltr">
+        <button onclick="fetchCertificate()" class="btn-primary px-5 py-2.5 rounded-xl text-xs font-black shrink-0">عرض</button>
+      </div>
+    </section>
+
+    <div id="certContainer" class="hidden space-y-4">
+      <div id="printableCert" class="cert-paper p-6 rounded-xl text-center">
+        <div class="border border-amber-700/40 p-5 rounded-lg space-y-3">
+          <div class="flex justify-center">
+            <svg class="w-8 h-8 text-amber-800" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 3L1 9l11 6 9-4.91V17h2V9M5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82z"/>
+            </svg>
+          </div>
+          <p class="text-[10px] tracking-widest text-amber-900 font-bold uppercase">AcademiaEvent Official Certificate</p>
+          <h3 class="text-lg font-black text-amber-950">شهادة حضور ومشاركة</h3>
+          <p class="text-xs text-stone-600">تشهد اللجنة المنظمة بأن:</p>
+          <h4 id="certStudentName" class="text-base font-black text-stone-900 py-1 border-b border-amber-600/40 inline-block px-6"></h4>
+          <p class="text-xs text-stone-700">
+            قد شارك في أعمال:<br>
+            <strong id="certEventTitle" class="text-amber-950 font-black"></strong>
+          </p>
+          <div class="pt-4 flex justify-between items-end text-right border-t border-amber-900/15 text-[9px] text-stone-500">
+            <div>
+              <span>رمز التوثيق: </span>
+              <span id="certHashCode" class="font-mono font-bold text-amber-950"></span>
+            </div>
+            <span class="font-bold text-amber-900">معتمد إلكترونياً • 2026</span>
+          </div>
+        </div>
+      </div>
+
+      <button onclick="downloadCertPDF()" class="btn-primary w-full py-3 rounded-xl text-xs font-black">
+        تنزيل الشهادة بصيغة PDF
+      </button>
+    </div>
+
+  </main>
+
+  <script src="app.js"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      loadCurrentUser();
+      const params = new URLSearchParams(window.location.search);
+      const code = params.get("code");
+      if (code) {
+        document.getElementById("certTicketCode").value = code;
+        fetchCertificate();
+      }
+    });
+
+    async function fetchCertificate() {
+      const code = document.getElementById("certTicketCode").value.trim();
+      const container = document.getElementById("certContainer");
+      if (!code) return;
+
+      const { data: ticket, error } = await supabaseClient
+        .from("tickets")
+        .select("*, events(title)")
+        .eq("ticket_code", code)
+        .maybeSingle();
+
+      if (error || !ticket) {
+        container.classList.add("hidden");
+        return showToast("كود التذكرة غير صحيح", "error");
+      }
+
+      document.getElementById("certStudentName").textContent = ticket.attendee_name;
+      document.getElementById("certEventTitle").textContent = ticket.events?.title || "المؤتمر الدولي للذكاء الاصطناعي 2026";
+      document.getElementById("certHashCode").textContent = ticket.certificate_hash || ticket.ticket_code;
+      container.classList.remove("hidden");
+    }
+
+    function downloadCertPDF() {
+      const element = document.getElementById("printableCert");
+      html2pdf().set({
+        margin: 8,
+        filename: "AcademiaEvent-Certificate.pdf",
+        image: { type: "jpeg", quality: 0.98 },
+        html2canvas: { scale: 2 },
+        jsPDF: { unit: "mm", format: "a4", orientation: "landscape" }
+      }).from(element).save();
+    }
+  </script>
+</body>
+</html>

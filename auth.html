@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>الحساب الأكاديمي | أكاديميا إيفنت</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@500;600;700;800;900&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    body {
+      font-family: 'Cairo', sans-serif;
+      background-color: #120B07;
+      background-image: 
+        radial-gradient(circle at 20% 10%, rgba(180, 95, 25, 0.22) 0%, transparent 45%),
+        radial-gradient(circle at 80% 85%, rgba(20, 140, 110, 0.15) 0%, transparent 50%);
+      color: #ffffff;
+      min-height: 100vh;
+    }
+    .glass-card {
+      background: linear-gradient(145deg, rgba(44, 28, 18, 0.75) 0%, rgba(18, 11, 7, 0.9) 100%);
+      backdrop-filter: blur(28px);
+      border-radius: 22px;
+      border: 1px solid rgba(255, 215, 150, 0.16);
+      border-top: 1.5px solid rgba(255, 240, 210, 0.4);
+      box-shadow: 0 18px 40px -10px rgba(0, 0, 0, 0.85);
+    }
+    .icon-box {
+      background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.14) 0%, rgba(28, 16, 10, 0.88) 100%);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+    .input-well {
+      background: rgba(8, 5, 3, 0.75);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+    }
+    .btn-primary {
+      background: linear-gradient(180deg, #5eead4 0%, #0d9488 100%);
+      color: #042f2e;
+      border-top: 1.5px solid #ffffff;
+    }
+  </style>
+</head>
+<body class="pb-16">
+
+  <!-- الهيدر مع زر الثلاث شرط أعلى اليمين -->
+  <header class="sticky top-0 z-40 px-4 py-3 glass-card rounded-none border-x-0 border-t-0 flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <button onclick="toggleSidebar()" aria-label="القائمة" class="w-10 h-10 rounded-xl icon-box flex flex-col items-center justify-center gap-1.5">
+        <span class="w-5 h-0.5 bg-amber-300 rounded-full"></span>
+        <span class="w-5 h-0.5 bg-amber-300 rounded-full"></span>
+        <span class="w-5 h-0.5 bg-amber-300 rounded-full"></span>
+      </button>
+      <a href="index.html" class="flex items-center gap-2">
+        <div class="w-8 h-8 rounded-xl icon-box flex items-center justify-center">
+          <svg class="w-4 h-4 text-amber-400" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3L1 9l11 6 9-4.91V17h2V9M5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82z"/></svg>
+        </div>
+        <span class="text-sm font-black text-amber-400">أكاديميا إيفنت</span>
+      </a>
+    </div>
+    <a href="index.html" class="text-xs text-stone-300 font-bold">الرئيسية</a>
+  </header>
+
+  <!-- القائمة الجانبية -->
+  <div id="mainDrawer" class="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm hidden flex justify-start">
+    <aside class="w-72 glass-card rounded-none h-full p-5 flex flex-col justify-between">
+      <div class="space-y-5">
+        <div class="flex items-center justify-between border-b border-white/10 pb-3">
+          <span class="font-black text-sm text-amber-400">أقسام المنصة</span>
+          <button onclick="toggleSidebar()" class="w-8 h-8 rounded-lg bg-white/5 text-stone-300 text-sm font-bold">✕</button>
+        </div>
+        <nav class="space-y-2 text-xs font-extrabold">
+          <a href="index.html" class="block p-3 rounded-xl bg-white/5 border border-white/10">الرئيسية والمؤتمرات</a>
+          <a href="auth.html" class="block p-3 rounded-xl bg-amber-500/20 border border-amber-400/40 text-amber-200">تسجيل الدخول والحسابات</a>
+          <a href="certificates.html" class="block p-3 rounded-xl bg-white/5 border border-white/10">إصدار وتوثيق الشهادات</a>
+          <a href="admin.html" class="block p-3 rounded-xl bg-emerald-500/15 border border-emerald-400/30 text-emerald-300">بوابة الإدارة والتحكيم</a>
+        </nav>
+      </div>
+    </aside>
+  </div>
+
+  <main class="max-w-md mx-auto px-4 mt-6">
+    <div class="glass-card p-5 space-y-5">
+
+      <!-- تبديل دخول / تسجيل -->
+      <div class="grid grid-cols-2 gap-2 p-1 rounded-xl bg-black/40 border border-white/10 text-xs font-extrabold">
+        <button id="tabLogin" onclick="switchAuthTab('login')" class="py-2 rounded-lg bg-amber-500 text-stone-950 transition">تسجيل الدخول</button>
+        <button id="tabSignup" onclick="switchAuthTab('signup')" class="py-2 rounded-lg text-stone-300 transition">إنشاء حساب</button>
+      </div>
+
+      <!-- زر Google الرسمي -->
+      <button onclick="loginWithGoogle()" class="w-full py-2.5 px-4 rounded-xl bg-white text-stone-900 font-extrabold text-xs flex items-center justify-center gap-2 shadow-lg active:scale-95 transition">
+        <svg class="w-4 h-4" viewBox="0 0 24 24">
+          <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z"/>
+          <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.11-6.72-4.96H1.29v3.14C3.26 21.3 7.31 24 12 24z"/>
+          <path fill="#FBBC05" d="M5.28 14.24c-.24-.72-.38-1.49-.38-2.24s.14-1.52.38-2.24V6.62H1.29C.47 8.24 0 10.06 0 12s.47 3.76 1.29 5.38l3.99-3.14z"/>
+          <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.31 0 3.26 2.7 1.29 6.62l3.99 3.14c.95-2.85 3.6-4.96 6.72-4.96z"/>
+        </svg>
+        <span>المتابعة باستخدام Google</span>
+      </button>
+
+      <div class="flex items-center gap-3 text-[10px] text-stone-500">
+        <div class="h-px bg-white/10 flex-1"></div>
+        <span>أو عبر البريد الإلكتروني</span>
+        <div class="h-px bg-white/10 flex-1"></div>
+      </div>
+
+      <!-- نموذج الدخول / التسجيل -->
+      <form id="authForm" onsubmit="handleEmailAuth(event)" class="space-y-3 text-xs">
+        <div id="signupExtraFields" class="hidden space-y-3">
+          <input type="text" id="fullName" placeholder="الاسم الرباعي (يُطبع في الشهادة)" class="input-well w-full rounded-xl px-3.5 py-2.5 text-white focus:outline-none">
+          <select id="userRole" class="input-well w-full rounded-xl px-3.5 py-2.5 text-white focus:outline-none">
+            <option value="student" class="bg-stone-900">باحث / طالب</option>
+            <option value="doctor" class="bg-stone-900">عضو لجنة علمية (محكّم)</option>
+            <option value="admin" class="bg-stone-900">مشرف النظام</option>
+          </select>
+        </div>
+
+        <input type="email" id="email" required placeholder="البريد الإلكتروني" class="input-well w-full rounded-xl px-3.5 py-2.5 text-white focus:outline-none" dir="ltr">
+        <input type="password" id="password" required minlength="6" placeholder="كلمة المرور" class="input-well w-full rounded-xl px-3.5 py-2.5 text-white focus:outline-none" dir="ltr">
+
+        <button type="submit" id="submitAuthBtn" class="btn-primary w-full py-3 rounded-xl font-black text-xs">دخول</button>
+      </form>
+
+    </div>
+  </main>
+
+  <script src="app.js"></script>
+  <script>
+    let mode = "login";
+
+    function switchAuthTab(selected) {
+      mode = selected;
+      const loginBtn = document.getElementById("tabLogin");
+      const signupBtn = document.getElementById("tabSignup");
+      const extra = document.getElementById("signupExtraFields");
+      const submitBtn = document.getElementById("submitAuthBtn");
+
+      if (mode === "signup") {
+        signupBtn.className = "py-2 rounded-lg bg-amber-500 text-stone-950 transition";
+        loginBtn.className = "py-2 rounded-lg text-stone-300 transition";
+        extra.classList.remove("hidden");
+        submitBtn.textContent = "إنشاء الحساب";
+      } else {
+        loginBtn.className = "py-2 rounded-lg bg-amber-500 text-stone-950 transition";
+        signupBtn.className = "py-2 rounded-lg text-stone-300 transition";
+        extra.classList.add("hidden");
+        submitBtn.textContent = "دخول";
+      }
+    }
+
+    async function handleEmailAuth(e) {
+      e.preventDefault();
+      const email = document.getElementById("email").value.trim();
+      const password = document.getElementById("password").value;
+
+      if (mode === "signup") {
+        const fullName = document.getElementById("fullName").value.trim() || email.split("@")[0];
+        const role = document.getElementById("userRole").value;
+
+        const { data, error } = await supabaseClient.auth.signUp({
+          email,
+          password,
+          options: { data: { full_name: fullName, role } }
+        });
+
+        if (error) return showToast(error.message, "error");
+
+        if (data?.user) {
+          await supabaseClient.from("profiles").upsert({
+            id: data.user.id,
+            full_name: fullName,
+            email,
+            role
+          });
+        }
+        showToast("تم إنشاء الحساب بنجاح", "success");
+        setTimeout(() => window.location.href = "index.html", 900);
+      } else {
+        const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
+        if (error) return showToast("بيانات الدخول غير صحيحة", "error");
+        showToast("تم تسجيل الدخول", "success");
+        setTimeout(() => window.location.href = "index.html", 700);
+      }
+    }
+  </script>
+</body>
+</html>

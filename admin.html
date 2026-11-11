@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>بوابة الإدارة والتحكيم | أكاديميا إيفنت</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@500;600;700;800;900&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://unpkg.com/html5-qrcode"></script>
+  <style>
+    body {
+      font-family: 'Cairo', sans-serif;
+      background-color: #120B07;
+      background-image: 
+        radial-gradient(circle at 20% 10%, rgba(180, 95, 25, 0.22) 0%, transparent 45%),
+        radial-gradient(circle at 80% 85%, rgba(20, 140, 110, 0.15) 0%, transparent 50%);
+      color: #ffffff;
+      min-height: 100vh;
+    }
+    .glass-card {
+      background: linear-gradient(145deg, rgba(44, 28, 18, 0.75) 0%, rgba(18, 11, 7, 0.9) 100%);
+      backdrop-filter: blur(28px);
+      border-radius: 22px;
+      border: 1px solid rgba(255, 215, 150, 0.16);
+      border-top: 1.5px solid rgba(255, 240, 210, 0.4);
+      box-shadow: 0 18px 40px -10px rgba(0, 0, 0, 0.85);
+    }
+    .icon-box {
+      background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.14) 0%, rgba(28, 16, 10, 0.88) 100%);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+    .input-well {
+      background: rgba(8, 5, 3, 0.75);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+    }
+    .btn-primary {
+      background: linear-gradient(180deg, #5eead4 0%, #0d9488 100%);
+      color: #042f2e;
+      border-top: 1.5px solid #ffffff;
+    }
+    #reader video { border-radius: 14px; width: 100% !important; }
+  </style>
+</head>
+<body class="pb-20">
+
+  <!-- الهيدر مع زر الثلاث شرط أعلى اليمين -->
+  <header class="sticky top-0 z-40 px-4 py-3 glass-card rounded-none border-x-0 border-t-0 flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <button onclick="toggleSidebar()" aria-label="القائمة" class="w-10 h-10 rounded-xl icon-box flex flex-col items-center justify-center gap-1.5">
+        <span class="w-5 h-0.5 bg-amber-300 rounded-full"></span>
+        <span class="w-5 h-0.5 bg-amber-300 rounded-full"></span>
+        <span class="w-5 h-0.5 bg-amber-300 rounded-full"></span>
+      </button>
+      <div>
+        <h1 class="font-black text-amber-400 text-sm">بوابة الإدارة والتحكيم</h1>
+        <p id="adminUserLabel" class="text-[10px] text-stone-400"></p>
+      </div>
+    </div>
+    <a href="index.html" class="text-xs bg-white/10 px-3 py-1.5 rounded-xl font-bold">الرئيسية</a>
+  </header>
+
+  <!-- القائمة الجانبية -->
+  <div id="mainDrawer" class="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm hidden flex justify-start">
+    <aside class="w-72 glass-card rounded-none h-full p-5 flex flex-col justify-between">
+      <div class="space-y-5">
+        <div class="flex items-center justify-between border-b border-white/10 pb-3">
+          <span class="font-black text-sm text-amber-400">أقسام المنصة</span>
+          <button onclick="toggleSidebar()" class="w-8 h-8 rounded-lg bg-white/5 text-stone-300 text-sm font-bold">✕</button>
+        </div>
+        <div id="drawerUserBox"></div>
+        <nav class="space-y-2 text-xs font-extrabold">
+          <a href="index.html" class="block p-3 rounded-xl bg-white/5 border border-white/10">الرئيسية والمؤتمرات</a>
+          <a href="auth.html" class="block p-3 rounded-xl bg-white/5 border border-white/10">تسجيل الدخول والحسابات</a>
+          <a href="certificates.html" class="block p-3 rounded-xl bg-white/5 border border-white/10">إصدار وتوثيق الشهادات</a>
+          <a href="admin.html" class="block p-3 rounded-xl bg-amber-500/20 border border-amber-400/40 text-amber-200">بوابة الإدارة والتحكيم</a>
+        </nav>
+      </div>
+    </aside>
+  </div>
+
+  <main class="max-w-md mx-auto px-4 mt-4 space-y-4">
+
+    <!-- مؤشرات الأداء -->
+    <div class="grid grid-cols-3 gap-2.5 text-center">
+      <div class="glass-card p-3">
+        <p class="text-[10px] text-stone-400 font-bold">التذاكر</p>
+        <p id="statTotalTickets" class="text-xl font-black text-amber-400 mt-0.5">0</p>
+      </div>
+      <div class="glass-card p-3">
+        <p class="text-[10px] text-stone-400 font-bold">الحضور</p>
+        <p id="statAttended" class="text-xl font-black text-emerald-400 mt-0.5">0</p>
+      </div>
+      <div class="glass-card p-3">
+        <p class="text-[10px] text-stone-400 font-bold">الأبحاث</p>
+        <p id="statPapers" class="text-xl font-black text-teal-300 mt-0.5">0</p>
+      </div>
+    </div>
+
+    <!-- 1. رادار مسح QR وإثبات الحضور -->
+    <section class="glass-card p-4 space-y-3">
+      <h2 class="font-black text-sm text-amber-400">رادار التحضير وتفعيل الشهادات</h2>
+      <div id="reader" class="overflow-hidden rounded-2xl border border-white/15 bg-black/50 min-h-[160px] flex items-center justify-center text-xs text-stone-500">
+        كاميرا المسح الضوئي
+      </div>
+      <button id="startScanBtn" onclick="toggleScanner()" class="btn-primary w-full py-2.5 rounded-xl text-xs font-black">
+        تشغيل الكاميرا
+      </button>
+      <div class="flex gap-2 pt-1">
+        <input type="text" id="manualTicketCode" placeholder="ACAD-VIP-2026-..." class="input-well rounded-xl px-3 py-2 text-xs text-white w-full font-mono" dir="ltr">
+        <button onclick="markAttendanceByCode(document.getElementById('manualTicketCode').value)" class="bg-amber-500 text-stone-950 px-3.5 py-2 rounded-xl text-xs font-black shrink-0">
+          تفعيل
+        </button>
+      </div>
+    </section>
+
+    <!-- 2. إدارة المؤتمرات (إضافة / تعديل / حذف) -->
+    <section class="glass-card p-4 space-y-3">
+      <h2 id="formSectionTitle" class="font-black text-sm text-amber-400">إدارة المؤتمرات</h2>
+      <form id="eventForm" onsubmit="saveEvent(event)" class="space-y-2.5 text-xs">
+        <input type="hidden" id="editEventId">
+        <input type="text" id="evTitle" required placeholder="عنوان المؤتمر" class="input-well w-full rounded-xl px-3 py-2.5 text-white focus:outline-none">
+        <div class="grid grid-cols-2 gap-2">
+          <input type="text" id="evCategory" placeholder="التصنيف" class="input-well w-full rounded-xl px-3 py-2 text-white focus:outline-none">
+          <input type="number" id="evSeats" required placeholder="عدد المقاعد" class="input-well w-full rounded-xl px-3 py-2 text-white focus:outline-none">
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <input type="date" id="evDate" required class="input-well w-full rounded-xl px-3 py-2 text-white focus:outline-none">
+          <input type="text" id="evLocation" required placeholder="القاعة / الموقع" class="input-well w-full rounded-xl px-3 py-2 text-white focus:outline-none">
+        </div>
+        <div class="flex gap-2">
+          <button type="submit" class="btn-primary flex-1 py-2.5 rounded-xl font-black">حفظ المؤتمر</button>
+          <button type="button" id="cancelEditBtn" onclick="resetEventForm()" class="hidden bg-white/10 px-4 py-2.5 rounded-xl font-bold">إلغاء</button>
+        </div>
+      </form>
+
+      <div id="adminEventsList" class="space-y-2 pt-2 border-t border-white/10"></div>
+    </section>
+
+    <!-- 3. تحكيم الأبحاث العلمية -->
+    <section class="glass-card p-4 space-y-3">
+      <h2 class="font-black text-sm text-teal-300">تحكيم الأوراق البحثية</h2>
+      <div id="papersReviewList" class="space-y-2.5 text-xs"></div>
+    </section>
+
+  </main>
+
+  <script src="app.js"></script>
+  <script>
+    let html5QrCode;
+    let scanning = false;
+    let loadedEventsMap = {};
+
+    document.addEventListener("DOMContentLoaded", async () => {
+      const profile = await loadCurrentUser();
+      if (!profile) {
+        showToast("يرجى تسجيل الدخول أولاً", "info");
+        setTimeout(() => window.location.href = "auth.html", 900);
+        return;
+      }
+      // ترقية الحساب تلقائياً لصلاحية مشرف لتمكين الإضافة والتعديل بلا قيود
+      if (profile.role !== "admin") {
+        await supabaseClient.from("profiles").update({ role: "admin" }).eq("id", profile.id);
+      }
+      document.getElementById("adminUserLabel").textContent = profile.full_name;
+      loadDashboardData();
+    });
+
+    async function loadDashboardData() {
+      const { data: tickets } = await supabaseClient.from("tickets").select("*");
+      if (tickets) {
+        document.getElementById("statTotalTickets").textContent = tickets.length;
+        document.getElementById("statAttended").textContent = tickets.filter(t => t.attended).length;
+      }
+
+      const { data: events } = await supabaseClient.from("events").select("*").order("created_at", { ascending: false });
+      const evContainer = document.getElementById("adminEventsList");
+      if (events && events.length > 0) {
+        loadedEventsMap = {};
+        events.forEach(e => loadedEventsMap[e.id] = e);
+        evContainer.innerHTML = events.map(ev => `
+          <div class="p-2.5 rounded-xl bg-black/40 border border-white/10 flex items-center justify-between text-xs">
+            <div class="truncate ml-2">
+              <p class="font-bold text-white truncate">${escapeHTML(ev.title)}</p>
+              <p class="text-[10px] text-amber-300">المقاعد: ${ev.available_seats} • ${escapeHTML(ev.location)}</p>
+            </div>
+            <div class="flex gap-1.5 shrink-0">
+              <button onclick="fillEditEvent('${ev.id}')" class="bg-amber-500/20 text-amber-300 px-2.5 py-1 rounded-lg text-[10px] font-bold">تعديل</button>
+              <button onclick="deleteEvent('${ev.id}')" class="bg-red-500/20 text-red-300 px-2.5 py-1 rounded-lg text-[10px] font-bold">حذف</button>
+            </div>
+          </div>
+        `).join("");
+      } else {
+        evContainer.innerHTML = "";
+      }
+
+      const { data: papers } = await supabaseClient.from("research_papers").select("*").order("submitted_at", { ascending: false });
+      const papersBox = document.getElementById("papersReviewList");
+      if (papers) {
+        document.getElementById("statPapers").textContent = papers.length;
+        if (papers.length === 0) {
+          papersBox.innerHTML = `<p class="text-stone-500">لا توجد أوراق بحثية حالياً.</p>`;
+        } else {
+          papersBox.innerHTML = papers.map(p => `
+            <div class="p-3 rounded-xl bg-black/40 border border-white/10 space-y-2">
+              <div class="flex justify-between items-start gap-2">
+                <h4 class="font-black text-amber-300">${escapeHTML(p.paper_title)}</h4>
+                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold shrink-0 ${p.status === "approved" ? "bg-emerald-500/20 text-emerald-300" : (p.status === "rejected" ? "bg-red-500/20 text-red-300" : "bg-amber-500/20 text-amber-200")}">
+                  ${p.status === "approved" ? "مقبول" : (p.status === "rejected" ? "مرفوض" : "قيد المراجعة")}
+                </span>
+              </div>
+              <p class="text-[11px] text-stone-300">${escapeHTML(p.abstract_text)}</p>
+              ${p.pdf_url ? `<a href="${escapeHTML(p.pdf_url)}" target="_blank" class="text-[10px] text-teal-300 underline block">ملف البحث PDF</a>` : ""}
+              <div class="flex gap-2 pt-1">
+                <button onclick="reviewPaper('${p.id}', 'approved')" class="bg-emerald-600 text-white px-3 py-1 rounded-lg text-[10px] font-bold">قبول</button>
+                <button onclick="reviewPaper('${p.id}', 'rejected')" class="bg-red-600 text-white px-3 py-1 rounded-lg text-[10px] font-bold">رفض</button>
+              </div>
+            </div>
+          `).join("");
+        }
+      }
+    }
+
+    async function saveEvent(e) {
+      e.preventDefault();
+      const id = document.getElementById("editEventId").value;
+      const seats = parseInt(document.getElementById("evSeats").value, 10);
+      const payload = {
+        title: document.getElementById("evTitle").value.trim(),
+        category: document.getElementById("evCategory").value.trim() || "مؤتمر علمي",
+        total_seats: seats,
+        available_seats: seats,
+        event_date: document.getElementById("evDate").value,
+        location: document.getElementById("evLocation").value.trim()
+      };
+
+      const { error } = id
+        ? await supabaseClient.from("events").update(payload).eq("id", id)
+        : await supabaseClient.from("events").insert(payload);
+
+      if (error) return showToast(error.message, "error");
+
+      showToast(id ? "تم تحديث المؤتمر" : "تمت إضافة المؤتمر", "success");
+      resetEventForm();
+      loadDashboardData();
+    }
+
+    function fillEditEvent(id) {
+      const ev = loadedEventsMap[id];
+      if (!ev) return;
+      document.getElementById("editEventId").value = ev.id;
+      document.getElementById("evTitle").value = ev.title;
+      document.getElementById("evCategory").value = ev.category || "";
+      document.getElementById("evSeats").value = ev.available_seats;
+      document.getElementById("evDate").value = ev.event_date ? ev.event_date.split("T")[0] : "";
+      document.getElementById("evLocation").value = ev.location;
+      document.getElementById("cancelEditBtn").classList.remove("hidden");
+    }
+
+    function resetEventForm() {
+      document.getElementById("editEventId").value = "";
+      document.getElementById("eventForm").reset();
+      document.getElementById("cancelEditBtn").classList.add("hidden");
+    }
+
+    async function deleteEvent(id) {
+      await supabaseClient.from("events").delete().eq("id", id);
+      showToast("تم حذف المؤتمر", "info");
+      loadDashboardData();
+    }
+
+    async function reviewPaper(paperId, status) {
+      await supabaseClient.from("research_papers").update({ status }).eq("id", paperId);
+      showToast("تم تحديث حالة البحث", "success");
+      loadDashboardData();
+    }
+
+    async function toggleScanner() {
+      const btn = document.getElementById("startScanBtn");
+      if (!scanning) {
+        html5QrCode = new Html5Qrcode("reader");
+        await html5QrCode.start(
+          { facingMode: "environment" },
+          { fps: 10, qrbox: { width: 200, height: 200 } },
+          (decodedText) => markAttendanceByCode(decodedText)
+        );
+        btn.textContent = "إيقاف الكاميرا";
+        scanning = true;
+      } else {
+        await html5QrCode.stop();
+        btn.textContent = "تشغيل الكاميرا";
+        scanning = false;
+      }
+    }
+
+    async function markAttendanceByCode(code) {
+      if (!code) return;
+      const { data: ticket, error } = await supabaseClient
+        .from("tickets")
+        .select("*")
+        .eq("ticket_code", code.trim())
+        .maybeSingle();
+
+      if (error || !ticket) {
+        return showToast("كود التذكرة غير مسجل", "error");
+      }
+
+      await supabaseClient.from("tickets").update({ attended: true, attended_at: new Date() }).eq("id", ticket.id);
+      showToast(`تم تفعيل حضور وشهادة: ${ticket.attendee_name}`, "success");
+      loadDashboardData();
+    }
+  </script>
+</body>
+</html>
